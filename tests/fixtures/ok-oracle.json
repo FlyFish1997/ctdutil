@@ -1,0 +1,19 @@
+{
+  "db": "oracle",
+  "schema": "scott",
+  "table": "emp",
+  "tableDesc": "员工信息表",
+  "fields": [
+    { "name": "emp_no", "desc": "员工编号", "type": "字符型", "length": "20", "precision": "", "scale": "" },
+    { "name": "emp_name", "desc": "员工姓名'含单引号", "type": "字符型", "length": "50", "precision": "", "scale": "" },
+    { "name": "sal", "desc": "薪资", "type": "数值型", "length": "", "precision": "10", "scale": "2" },
+    { "name": "age", "desc": "年龄", "type": "整型", "length": "", "precision": "", "scale": "" },
+    { "name": "hire_date", "desc": "入职日期", "type": "日期型", "length": "", "precision": "", "scale": "" },
+    { "name": "created_at", "desc": "创建时间", "type": "时间戳", "length": "", "precision": "", "scale": "" }
+  ],
+  "pk": { "name": "pk_emp", "fields": ["emp_no", "emp_name"] },
+  "indexes": [
+    { "name": "idx_emp_01", "fields": ["emp_name", "hire_date"] },
+    { "name": "idx_emp_02", "unique": true, "fields": ["sal"] }
+  ]
+}

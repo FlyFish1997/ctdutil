@@ -1,0 +1,18 @@
+# 运行时产物（CLI --ddl-out、临时验证目录）
+out/
+__h2verify/
+.tmp/
+
+# 依赖目录（本项目零依赖，仅防误装）
+node_modules/
+
+# 编辑器与系统文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 日志与临时文件
+*.log
+*.tmp

@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<!-- GENERATED-FILE: 本文件由 src/build.mjs 生成，请勿直接编辑 -->
+<!--
+  ============================================================================
+  本文件由 src/build.mjs 从 src/index.template.html + src/core.js 生成，请勿直接编辑。
+  改动方式：改 src/index.template.html（界面）或 src/core.js（业务规则），再跑
+      node src/build.mjs
+  生成后可用以下命令自证与源文件一致（漂移断言）：
+      node tests/run.js
+  ============================================================================
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>表结构登记与 DDL 生成工具</title>
+<script src="jquery.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --bg: #f3f5f9;
+  --card: #ffffff;
+  --line: #e3e7ee;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --danger: #dc2626;
+  --ok: #16a34a;
+  --radius: 10px;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+.app { max-width: 1000px; margin: 0 auto; padding: 30px 16px 60px; }
+header { margin-bottom: 26px; }
+.header-top { position: relative; display: flex; justify-content: center; }
+.title-wrap { text-align: center; }
+#btnExportExcel { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+header h1 { font-size: 24px; letter-spacing: .5px; }
+header p { color: var(--muted); margin-top: 6px; font-size: 13px; }
+
+/* ---------- 步骤指示器 ---------- */
+.steps { display: flex; justify-content: space-between; margin-bottom: 22px; padding: 0 4px; }
+.steps li { list-style: none; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.steps .dot {
+  width: 28px; height: 28px; border-radius: 50%; border: 2px solid #cbd5e1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; background: #fff; transition: all .2s; flex: none;
+}
+.steps li.active { color: var(--primary); font-weight: 600; }
+.steps li.active .dot { border-color: var(--primary); color: var(--primary); box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
+.steps li.done { color: var(--ok); }
+.steps li.done .dot { border-color: var(--ok); background: var(--ok); color: #fff; }
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 26px 30px; box-shadow: 0 1px 3px rgba(15,23,42,.06);
+}
+.card h2 { font-size: 18px; margin-bottom: 4px; }
+.hint { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+.muted { color: var(--muted); }
+.err {
+  background: #fef2f2; color: var(--danger); border: 1px solid #fecaca;
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px;
+}
+.step { animation: fadeIn .25s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ---------- 数据库选择 ---------- */
+.db-cards { display: flex; flex-wrap: wrap; gap: 16px; }
+.db-card {
+  flex: 1 1 200px; border: 2px solid var(--line); border-radius: var(--radius);
+  padding: 24px 16px; text-align: center; cursor: pointer; transition: all .15s; background: #fff;
+}
+.db-card:hover { border-color: #bfdbfe; }
+.db-card.selected { border-color: var(--primary); background: #eff6ff; box-shadow: 0 0 0 4px rgba(37,99,235,.1); }
+.db-card input { display: none; }
+.db-ico {
+  width: 52px; height: 52px; margin: 0 auto 12px; border-radius: 14px;
+  background: var(--primary); color: #fff; font-size: 24px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.db-card:nth-child(2) .db-ico { background: #0e9f6e; }
+.db-card:nth-child(3) .db-ico { background: #f29111; }
+.db-card:nth-child(4) .db-ico { background: #0b7285; }
+.db-name { font-weight: 600; font-size: 16px; }
+.db-desc { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+/* ---------- 表单 ---------- */
+.form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.form.col2 { grid-template-columns: repeat(2, 1fr); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; font-weight: 500; }
+.field label i { color: var(--danger); font-style: normal; margin-left: 2px; }
+.inp {
+  width: 100%; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+  font-size: 14px; outline: none; font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
+}
+.inp:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.inp:disabled { background: #f1f5f9; color: #94a3b8; }
+.inp:read-only { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+.inp.invalid { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(220,38,38,.12); }
+
+/* ---------- 字段表格 ---------- */
+.table-wrap { overflow-x: auto; margin-bottom: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { border: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: middle; }
+th { background: #f8fafc; font-weight: 600; white-space: nowrap; }
+td.idx { width: 40px; text-align: center; color: var(--muted); }
+td.ops { width: 56px; text-align: center; white-space: nowrap; }
+td .inp { padding: 6px 8px; }
+tr.empty td { color: var(--muted); text-align: center; padding: 22px 0; }
+#fieldTable td input[type="text"], #fieldTable td select { min-width: 0; }
+
+/* ---------- 勾选项 ---------- */
+.check-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.check-item {
+  display: flex; align-items: center; gap: 8px; border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 12px; cursor: pointer; background: #fff; transition: border-color .15s;
+}
+.check-item:hover { border-color: #bfdbfe; }
+.check-item input { accent-color: var(--primary); width: 15px; height: 15px; flex: none; }
+.ck-name { font-weight: 600; font-size: 13px; white-space: nowrap; }
+.ck-desc { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 索引 ---------- */
+.idx-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
+.idx-card.invalid { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(220,38,38,.1); }
+.idx-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.idx-no { font-weight: 600; font-size: 14px; white-space: nowrap; }
+.idx-name { max-width: 280px; }
+.idx-type { max-width: 118px; flex: none; }
+.idx-head .btn-del { margin-left: auto; padding: 4px 12px; }
+.idx-body { display: flex; align-items: flex-start; gap: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; background: #eff6ff;
+  border: 1px solid #bfdbfe; color: #1d4ed8; border-radius: 999px;
+  padding: 3px 10px 3px 4px; font-size: 12px;
+}
+.chip em {
+  background: var(--primary); color: #fff; border-radius: 999px;
+  width: 18px; height: 18px; display: inline-flex; align-items: center;
+  justify-content: center; font-style: normal; font-size: 11px;
+}
+.chip-del { border: none; background: none; color: #93c5fd; cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; }
+.chip-del:hover { color: var(--danger); }
+.chip-none { color: var(--muted); font-size: 12px; }
+.empty-tip { color: var(--muted); font-size: 13px; padding: 8px 0; }
+
+/* ---------- 按钮 ---------- */
+.btn {
+  border: none; border-radius: 8px; padding: 9px 20px; font-size: 14px;
+  cursor: pointer; transition: all .15s; font-family: inherit;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-outline { background: #fff; border: 1px solid #cbd5e1; color: var(--text); }
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-del {
+  background: none; border: 1px solid #fecaca; color: var(--danger);
+  border-radius: 6px; padding: 3px 9px; cursor: pointer; font-size: 13px; line-height: 1.4;
+}
+.btn-del:hover { background: #fef2f2; }
+.toolbar { margin-top: 12px; display: flex; gap: 10px; align-items: center; }
+.nav { display: flex; justify-content: space-between; margin-top: 24px; }
+
+/* ---------- 结果与 DDL ---------- */
+.sum-table { margin-bottom: 6px; }
+.sum-table th { width: 110px; }
+#summary h3 { font-size: 15px; margin: 16px 0 8px; color: #374151; }
+#summary h3:first-child { margin-top: 0; }
+.idx-sum { list-style: none; }
+.idx-sum li { font-size: 14px; padding: 3px 0; }
+.ddl-head { display: flex; justify-content: space-between; align-items: center; margin: 20px 0 8px; font-weight: 600; }
+pre.ddl {
+  background: #0f172a; color: #dbeafe; border-radius: 8px; padding: 16px;
+  font-size: 13px; line-height: 1.65; overflow: auto; max-height: 420px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  white-space: pre;
+}
+
+/* ---------- 弹窗 ---------- */
+.modal-mask {
+  position: fixed; inset: 0; background: rgba(15,23,42,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal {
+  background: #fff; border-radius: 12px; padding: 22px 24px;
+  width: 660px; max-width: 92vw; max-height: 86vh; overflow: auto;
+  box-shadow: 0 20px 50px rgba(15,23,42,.3);
+}
+.modal h3 { margin-bottom: 14px; font-size: 16px; }
+.modal .check-grid { grid-template-columns: repeat(2, 1fr); margin-bottom: 14px; }
+.modal .chips { margin-bottom: 8px; }
+.modal .hint { margin-bottom: 0; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.modal .err { margin-top: 10px; margin-bottom: 0; }
+
+@media (max-width: 760px) {
+  .steps li .label { display: none; }
+  .header-top { flex-direction: column; align-items: center; gap: 10px; }
+  #btnExportExcel { position: static; transform: none; }
+  .form, .form.col2, .db-cards, .check-grid { grid-template-columns: 1fr; }
+  .db-cards { flex-direction: column; }
+  .card { padding: 20px 16px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-top">
+      <div class="title-wrap">
+        <h1>表结构登记与 DDL 生成工具</h1>
+        <p>分步登记表结构，自动生成适配 Oracle / GaussDB / MySQL / H2 的建表语句（DDL 英文均为小写）</p>
+      </div>
+      <button class="btn btn-primary" id="btnExportExcel" disabled title="完成全部步骤后，可将结构导出为 Excel">导出 Excel</button>
+    </div>
+  </header>
+
+  <ol class="steps" id="steps">
+    <li data-step="1"><span class="dot">1</span><span class="label">选择数据库</span></li>
+    <li data-step="2"><span class="dot">2</span><span class="label">基本信息</span></li>
+    <li data-step="3"><span class="dot">3</span><span class="label">字段定义</span></li>
+    <li data-step="4"><span class="dot">4</span><span class="label">主键设置</span></li>
+    <li data-step="5"><span class="dot">5</span><span class="label">索引设置</span></li>
+    <li data-step="6"><span class="dot">6</span><span class="label">生成 DDL</span></li>
+  </ol>
+
+  <div class="card">
+    <div class="err" id="errMsg" hidden></div>
+
+    <!-- 第一步：选择数据库 -->
+    <section class="step" id="step1">
+      <h2>第一步 · 选择目标数据库</h2>
+      <p class="hint">请选择生成 DDL 语句的目标数据库，将影响字段类型的映射。</p>
+      <div class="db-cards">
+        <label class="db-card" data-db="oracle">
+          <input type="radio" name="db" value="oracle"/>
+          <div class="db-ico">O</div>
+          <div class="db-name">Oracle</div>
+          <div class="db-desc">varchar2 / number / date / timestamp</div>
+        </label>
+        <label class="db-card" data-db="gauss">
+          <input type="radio" name="db" value="gauss"/>
+          <div class="db-ico">G</div>
+          <div class="db-name">GaussDB</div>
+          <div class="db-desc">varchar2 / numeric / date / timestamp</div>
+        </label>
+        <label class="db-card" data-db="mysql">
+          <input type="radio" name="db" value="mysql"/>
+          <div class="db-ico">M</div>
+          <div class="db-name">MySQL</div>
+          <div class="db-desc">varchar / decimal / date / datetime</div>
+        </label>
+        <label class="db-card" data-db="h2">
+          <input type="radio" name="db" value="h2"/>
+          <div class="db-ico">H</div>
+          <div class="db-name">H2（文件模式）</div>
+          <div class="db-desc">varchar / numeric / int / date / timestamp</div>
+        </label>
+      </div>
+    </section>
+
+    <!-- 第二步：基本信息 -->
+    <section class="step" id="step2" hidden>
+      <h2>第二步 · 基本信息</h2>
+      <p class="hint">以下均为必填项；主键名与索引名将基于小写的表名自动生成。</p>
+      <div class="form">
+        <div class="field">
+          <label>Schema 名<i>*</i></label>
+          <input class="inp" id="inpSchema" placeholder="如 scott"/>
+        </div>
+        <div class="field">
+          <label>表名<i>*</i></label>
+          <input class="inp" id="inpTable" placeholder="如 emp"/>
+        </div>
+        <div class="field">
+          <label>表描述<i>*</i></label>
+          <input class="inp" id="inpDesc" placeholder="如 员工信息表"/>
+        </div>
+      </div>
+    </section>
+
+    <!-- 第三步：字段定义 -->
+    <section class="step" id="step3" hidden>
+      <h2>第三步 · 字段定义</h2>
+      <p class="hint">字段名、字段描述、字段类型为必填；字符型需填长度，数值型需填精度与小数位数。</p>
+      <div class="table-wrap">
+        <table id="fieldTable">
+          <thead>
+            <tr>
+              <th>序号</th><th>字段名 *</th><th>字段描述 *</th><th>字段类型 *</th>
+              <th>字段长度</th><th>精度</th><th>小数位数</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="fieldBody"></tbody>
+        </table>
+      </div>
+      <div class="toolbar"><button class="btn btn-outline" id="btnAddField">+ 新增字段</button></div>
+    </section>
+
+    <!-- 第四步：主键设置 -->
+    <section class="step" id="step4" hidden>
+      <h2>第四步 · 主键设置</h2>
+      <p class="hint">勾选一个或多个字段作为主键（组合主键）；不勾选任何字段则本表无主键。</p>
+      <div class="form col2" style="margin-bottom:16px;">
+        <div class="field">
+          <label>主键名称（自动生成 pk_小写表名，不可修改）</label>
+          <input class="inp" id="inpPkName" readonly/>
+        </div>
+      </div>
+      <p class="hint" style="margin-bottom:10px;">请勾选主键字段：</p>
+      <div class="check-grid" id="pkList"></div>
+    </section>
+
+    <!-- 第五步：索引设置 -->
+    <section class="step" id="step5" hidden>
+      <h2>第五步 · 索引设置</h2>
+      <p class="hint" id="pkHint"></p>
+      <p class="hint" style="margin-bottom:12px;">
+        最多 10 个索引；每个索引可选「普通索引」或「唯一索引」（唯一索引生成 create unique index）；
+        组合索引字段按勾选先后顺序排列，单个索引最多 10 个字段；
+        索引字段不能与主键完全相同；索引名默认为 idx_小写表名_序号（序号从 01 递增）。
+      </p>
+      <div id="idxList"></div>
+      <div class="toolbar">
+        <button class="btn btn-outline" id="btnAddIndex">+ 新增索引</button>
+        <span class="muted" id="idxLimitTip" style="font-size:12px; margin-left:8px;"></span>
+      </div>
+    </section>
+
+    <!-- 第六步：结果 -->
+    <section class="step" id="step6" hidden>
+      <h2>第六步 · 结构总览与 DDL</h2>
+      <div id="summary"></div>
+      <div class="ddl-head"><span>DDL 语句（<span id="ddlDbName"></span>）</span><button class="btn btn-primary" id="btnCopy">复制 DDL</button></div>
+      <pre class="ddl" id="ddlText"></pre>
+      <div class="toolbar">
+        <button class="btn btn-outline" id="btnReset">重新填写</button>
+      </div>
+    </section>
+
+    <div class="nav">
+      <button class="btn btn-outline" id="btnPrev" hidden>上一步</button>
+      <button class="btn btn-primary" id="btnNext">下一步</button>
+    </div>
+  </div>
+</div>
+
+<!-- 索引字段选择弹窗 -->
+<div class="modal-mask" id="modalMask" hidden>
+  <div class="modal">
+    <h3 id="modalTitle">选择索引字段</h3>
+    <p class="hint" style="margin-bottom:10px;">字段顺序与勾选时的顺序一致：</p>
+    <div class="check-grid" id="modalFields"></div>
+    <div class="chips" id="modalOrder"></div>
+    <p class="hint" id="modalHint"></p>
+    <div class="err" id="modalErr" hidden></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="modalCancel">取消</button>
+      <button class="btn btn-primary" id="modalOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     core.js 内联区（由 src/build.mjs 注入；勿手改）
+     ============================================================ -->
+<script>
+/* __CORE_SOURCE__ */
+</script>
+
+<!-- ============================================================
+     界面层：只做 DOM 读写；业务规则一律调用 window.Core
+     ============================================================ -->
+<script>
+(function ($, Core) {
+  'use strict';
+
+  if (!Core) {
+    $('#errMsg').removeAttr('hidden').text('核心引擎加载失败：core.js 未注入，请重新执行 node src/build.mjs');
+    return;
+  }
+
+  var MAX_INDEX = Core.MAX_INDEX;
+  var MAX_INDEX_FIELDS = Core.MAX_INDEX_FIELDS;
+  var DB_LABEL = Core.DB_LABEL;
+
+  var TYPE_STYLE = {
+    '字符型':   { len: true,  num: false },
+    '数值型':   { len: false, num: true },
+    '整型':     { len: false, num: false },
+    '日期型':   { len: false, num: false },
+    '时间戳':   { len: false, num: false }
+  };
+
+  var data = Core.emptyInput();
+  var currentStep = 1;
+  var editingIndex = -1;
+  var modalOrder = [];
+
+  function trim(s) { return Core.trim(s); }
+  function esc(s) { return Core.escXml(s); }
+  function pad2(n) { return Core.pad2(n); }
+
+  /* ================= 错误提示 ================= */
+  function err(msg) { $('#errMsg').removeAttr('hidden').text(msg); return false; }
+  function clearErr() { $('#errMsg').attr('hidden', 'hidden').text(''); $('.invalid').removeClass('invalid'); }
+
+  /* ================= 数据收集（DOM → data） ================= */
+  function collectFieldsFromDom() {
+    var list = [];
+    $('#fieldBody tr[data-i]').each(function () {
+      var $r = $(this);
+      list.push({
+        name: trim($r.find('.f-name').val()),
+        desc: trim($r.find('.f-desc').val()),
+        type: $r.find('.f-type').val(),
+        length: trim($r.find('.f-len').val()),
+        precision: trim($r.find('.f-pre').val()),
+        scale: trim($r.find('.f-sca').val())
+      });
+    });
+    data.fields = list;
+  }
+
+  function collectBaseFromDom() {
+    data.schema = trim($('#inpSchema').val());
+    data.table = trim($('#inpTable').val());
+    data.tableDesc = trim($('#inpDesc').val());
+  }
+
+  function collectPkFromDom() {
+    var sel = [];
+    $('#pkList .pk-chk:checked').each(function () { sel.push(this.value); });
+    data.pk.fields = sel;
+    data.pk.name = trim($('#inpPkName').val());
+  }
+
+  function collectIndexesFromDom() {
+    $('#idxList .idx-card').each(function () {
+      var i = +$(this).attr('data-i');
+      if (data.indexes[i]) data.indexes[i].name = trim($(this).find('.idx-name').val());
+    });
+  }
+
+  /* ================= 校验（统一走 Core） ================= */
+  /** 返回 true / false；失败时把 Core 的 message 显示出来，并定位出错控件 */
+  function validateStep(n) {
+    clearErr();
+    var errors = Core.validate(data).filter(function (e) { return e.step === n; });
+    if (!errors.length) return true;
+    var e = errors[0];
+    markInvalid(e);
+    return err(e.message);
+  }
+
+  /** 按 Core 错误里的定位信息给控件加红框 */
+  function markInvalid(e) {
+    if (e.field === 'schema') $('#inpSchema').addClass('invalid');
+    else if (e.field === 'table') $('#inpTable').addClass('invalid');
+    else if (e.field === 'tableDesc') $('#inpDesc').addClass('invalid');
+    else if (e.field === 'fields' && typeof e.index === 'number') {
+      var $row = $('#fieldBody tr[data-i="' + e.index + '"]');
+      var cls = e.code === 'E_FIELD_DESC_REQUIRED' ? '.f-desc'
+        : e.code === 'E_FIELD_LENGTH_REQUIRED' || e.code === 'E_FIELD_LENGTH_INVALID' ? '.f-len'
+        : e.code === 'E_FIELD_PRECISION_REQUIRED' || e.code === 'E_FIELD_PRECISION_INVALID' ? '.f-pre'
+        : e.code === 'E_FIELD_SCALE_REQUIRED' || e.code === 'E_FIELD_SCALE_INVALID' || e.code === 'E_FIELD_SCALE_GE_PRECISION' ? '.f-sca'
+        : '.f-name';
+      $row.find(cls).addClass('invalid');
+    } else if (e.field === 'pk.name') $('#inpPkName').addClass('invalid');
+    else if (e.field === 'indexes' && typeof e.index === 'number') {
+      $('#idxList .idx-card[data-i="' + e.index + '"]').addClass('invalid');
+    }
+  }
+
+  /* ================= 第三步：字段表格 ================= */
+  function fieldRowHtml(f, i) {
+    var typeOpts = Core.FIELD_TYPES.map(function (t) {
+      return '<option' + (t === f.type ? ' selected' : '') + '>' + t + '</option>';
+    }).join('');
+    var st = TYPE_STYLE[f.type] || TYPE_STYLE['字符型'];
+    return '<tr data-i="' + i + '">' +
+      '<td class="idx">' + (i + 1) + '</td>' +
+      '<td><input class="inp f-name" value="' + esc(f.name) + '" placeholder="如 emp_no"/></td>' +
+      '<td><input class="inp f-desc" value="' + esc(f.desc) + '" placeholder="如 员工编号"/></td>' +
+      '<td><select class="inp f-type">' + typeOpts + '</select></td>' +
+      '<td><input class="inp f-len num" value="' + esc(f.length) + '"' + (st.len ? '' : ' disabled') + ' placeholder="字符长度"/></td>' +
+      '<td><input class="inp f-pre num" value="' + esc(f.precision) + '"' + (st.num ? '' : ' disabled') + ' placeholder="精度"/></td>' +
+      '<td><input class="inp f-sca num" value="' + esc(f.scale) + '"' + (st.num ? '' : ' disabled') + ' placeholder="小数位"/></td>' +
+      '<td class="ops"><button class="btn-del" title="删除该字段">删除</button></td>' +
+      '</tr>';
+  }
+
+  function renderFieldRows() {
+    var html = data.fields.map(fieldRowHtml).join('');
+    if (!data.fields.length) {
+      html = '<tr class="empty"><td colspan="8">暂无字段，请点击下方"新增字段"按钮添加</td></tr>';
+    }
+    $('#fieldBody').html(html);
+  }
+
+  /* ================= 第四步：主键 ================= */
+  function renderPkStep() {
+    var names = data.fields.map(function (f) { return f.name; });
+    data.pk.fields = data.pk.fields.filter(function (n) {
+      return names.some(function (x) { return x.toLowerCase() === String(n).toLowerCase(); });
+    });
+    var defName = Core.pkName(data.table);
+    data.pk.name = defName;
+    $('#inpPkName').val(defName);
+
+    var html = data.fields.map(function (f) {
+      var checked = data.pk.fields.some(function (n) { return n.toLowerCase() === f.name.toLowerCase(); }) ? ' checked' : '';
+      return '<label class="check-item"><input type="checkbox" class="pk-chk" value="' + esc(f.name) + '"' + checked + '/>' +
+        '<span class="ck-name">' + esc(f.name) + '</span><span class="ck-desc">' + esc(f.desc) + '</span></label>';
+    }).join('');
+    $('#pkList').html(html || '<p class="empty-tip">暂无字段可选，请先返回第三步添加字段</p>');
+  }
+
+  /* ================= 第五步：索引 ================= */
+  function indexCardHtml(idx, i) {
+    var chips = idx.fields.map(function (f, j) {
+      return '<span class="chip"><em>' + (j + 1) + '</em>' + esc(f) +
+        '<button class="chip-del" data-i="' + i + '" data-f="' + esc(f) + '">×</button></span>';
+    }).join('') || '<span class="chip-none">未选择字段</span>';
+    var cur = Core.indexTypeOf(idx);
+    var typeOpts = Core.INDEX_TYPES.map(function (t) {
+      return '<option value="' + t + '"' + (t === cur ? ' selected' : '') + '>' + Core.INDEX_TYPE_LABEL[t] + '</option>';
+    }).join('');
+    return '<div class="idx-card" data-i="' + i + '">' +
+      '<div class="idx-head">' +
+      '<span class="idx-no">索引 ' + (i + 1) + '</span>' +
+      '<input class="inp idx-name" value="' + esc(idx.name) + '" placeholder="idx_表名_01"/>' +
+      '<select class="inp idx-type" title="索引类型：唯一索引生成 create unique index">' + typeOpts + '</select>' +
+      '<button class="btn-del idx-del" title="删除该索引">删除索引</button>' +
+      '</div>' +
+      '<div class="idx-body">' +
+      '<button class="btn btn-outline btn-pick" data-i="' + i + '">选择字段</button>' +
+      '<div class="chips">' + chips + '</div>' +
+      '</div></div>';
+  }
+
+  function renderIdxStep() {
+    var fieldNames = data.fields.map(function (f) { return f.name; });
+    data.indexes.forEach(function (idx) {
+      idx.fields = idx.fields.filter(function (n) {
+        return fieldNames.some(function (x) { return x.toLowerCase() === String(n).toLowerCase(); });
+      });
+    });
+    data.indexes.forEach(function (idx, i) {
+      if (idx.nameAuto) idx.name = Core.indexAutoName(data.table, i);
+    });
+
+    var pkText = data.pk.fields.length ? '当前主键：' + data.pk.fields.join(', ') : '当前主键：无';
+    $('#pkHint').text(pkText);
+
+    var html = data.indexes.map(indexCardHtml).join('');
+    $('#idxList').html(html || '<p class="empty-tip">暂未添加索引，可点击"新增索引"（本表允许无索引）</p>');
+    $('#btnAddIndex').prop('disabled', data.indexes.length >= MAX_INDEX);
+    $('#idxLimitTip').text(data.indexes.length >= MAX_INDEX ? '（索引数量已达上限 ' + MAX_INDEX + ' 个）' : '');
+  }
+
+  /* ================= 索引字段选择弹窗 ================= */
+  function openModal(i) {
+    editingIndex = i;
+    modalOrder = data.indexes[i].fields.slice();
+    var html = data.fields.map(function (f) {
+      var checked = modalOrder.some(function (n) { return n.toLowerCase() === f.name.toLowerCase(); }) ? ' checked' : '';
+      return '<label class="check-item"><input type="checkbox" class="modal-chk" value="' + esc(f.name) + '"' + checked + '/>' +
+        '<span class="ck-name">' + esc(f.name) + '</span><span class="ck-desc">' + esc(f.desc) + '</span></label>';
+    }).join('');
+    $('#modalFields').html(html);
+    $('#modalTitle').text('选择索引 ' + (i + 1) + ' 的字段（按勾选顺序排列，最多 ' + MAX_INDEX_FIELDS + ' 个）');
+    $('#modalErr').attr('hidden', 'hidden').text('');
+    updateModalOrder();
+    $('#modalMask').removeAttr('hidden');
+  }
+
+  function closeModal() { $('#modalMask').attr('hidden', 'hidden'); editingIndex = -1; }
+
+  function updateModalOrder() {
+    var html = modalOrder.map(function (f, j) {
+      return '<span class="chip"><em>' + (j + 1) + '</em>' + esc(f) +
+        '<button class="chip-del" data-f="' + esc(f) + '">×</button></span>';
+    }).join('') || '<span class="chip-none">未选择字段（勾选后按先后排序）</span>';
+    $('#modalOrder').html(html);
+    $('#modalHint').text('已选 ' + modalOrder.length + ' / ' + MAX_INDEX_FIELDS + ' 个字段');
+  }
+
+  /* ================= 第六步：结果 ================= */
+  function renderSummary() {
+    var result = Core.generate(data, { includeExcel: false });
+    $('#ddlDbName').text(DB_LABEL[data.db] || '');
+    var h = '';
+    h += '<h3>基本信息</h3>';
+    h += '<table class="sum-table"><tr><th>目标数据库</th><td>' + esc(DB_LABEL[data.db] || '') + '</td></tr>' +
+      '<tr><th>Schema</th><td>' + esc(data.schema) + '</td></tr>' +
+      '<tr><th>表名</th><td>' + esc(data.table) + '</td></tr>' +
+      '<tr><th>表描述</th><td>' + esc(data.tableDesc) + '</td></tr></table>';
+
+    h += '<h3>字段定义</h3>';
+    h += '<table class="sum-table"><thead><tr><th>#</th><th>字段名</th><th>字段描述</th><th>字段类型</th><th>长度</th><th>精度</th><th>小数位数</th></tr></thead><tbody>';
+    data.fields.forEach(function (f, i) {
+      h += '<tr><td>' + (i + 1) + '</td><td>' + esc(f.name) + '</td><td>' + esc(f.desc) + '</td><td>' + esc(f.type) + '</td>' +
+        '<td>' + (f.length ? esc(f.length) : '-') + '</td><td>' + (f.precision ? esc(f.precision) : '-') + '</td><td>' + (f.scale ? esc(f.scale) : '-') + '</td></tr>';
+    });
+    h += '</tbody></table>';
+
+    h += '<h3>主键</h3>';
+    h += data.pk.fields.length
+      ? '<p>主键名：<b>' + esc(data.pk.name) + '</b>；主键字段：' + data.pk.fields.map(esc).join(', ') + '</p>'
+      : '<p class="muted">无主键</p>';
+
+    h += '<h3>索引</h3>';
+    h += data.indexes.length
+      ? '<ul class="idx-sum">' + data.indexes.map(function (idx) {
+          return '<li><b>' + esc(idx.name) + '</b>（' + esc(Core.INDEX_TYPE_LABEL[Core.indexTypeOf(idx)]) + '）：' +
+            idx.fields.map(esc).join(', ') + '</li>';
+        }).join('') + '</ul>'
+      : '<p class="muted">无索引</p>';
+
+    $('#summary').html(h);
+    $('#ddlText').text(result.ddl || '');
+  }
+
+  /* ================= 导出 Excel（DOM 只负责下载动作） ================= */
+  function exportExcelDoc() {
+    var result = Core.generate(data, { includeExcel: true });
+    if (!result.ok || !result.excel) {
+      throw new Error(result.errors.length ? result.errors[0].message : '数据不完整，无法导出');
+    }
+    var xls = result.excel;
+    var blob = new Blob([xls.content], { type: xls.mimeType });
+    if (window.navigator.msSaveBlob) { window.navigator.msSaveBlob(blob, xls.fileName); return; }
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = xls.fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  /* ================= 步骤导航 ================= */
+  function updateSteps() {
+    $('#steps li').each(function () {
+      var s = +$(this).attr('data-step');
+      $(this).toggleClass('active', s === currentStep).toggleClass('done', s < currentStep);
+    });
+  }
+
+  function goToStep(n) {
+    if (n < 1 || n > 6) return;
+    if (n > currentStep) {
+      // 前进前先把当前步骤的 DOM 收进 data，再按该步骤规则校验
+      if (currentStep === 1) { /* 第一步数据由 change 事件写入 */ }
+      if (currentStep === 2) collectBaseFromDom();
+      if (currentStep === 3) collectFieldsFromDom();
+      if (currentStep === 4) collectPkFromDom();
+      if (currentStep === 5) collectIndexesFromDom();
+      if (!validateStep(currentStep)) return;
+    }
+    currentStep = n;
+    clearErr();
+    $('.step').attr('hidden', 'hidden');
+    $('#step' + n).removeAttr('hidden');
+
+    if (n === 1) {
+      $('input[name="db"]').prop('checked', false);
+      $('.db-card').removeClass('selected');
+      if (data.db) {
+        $('input[name="db"][value="' + data.db + '"]').prop('checked', true);
+        $('.db-card[data-db="' + data.db + '"]').addClass('selected');
+      }
+    }
+    if (n === 2) {
+      $('#inpSchema').val(data.schema);
+      $('#inpTable').val(data.table);
+      $('#inpDesc').val(data.tableDesc);
+    }
+    if (n === 3) renderFieldRows();
+    if (n === 4) renderPkStep();
+    if (n === 5) renderIdxStep();
+    if (n === 6) renderSummary();
+
+    if (n > 1) { $('#btnPrev').removeAttr('hidden'); } else { $('#btnPrev').attr('hidden', 'hidden'); }
+    if (n === 6) { $('#btnNext').attr('hidden', 'hidden'); }
+    else {
+      $('#btnNext').removeAttr('hidden').text(n >= 3 && n <= 5 ? '确定，下一步' : '下一步');
+    }
+    $('#btnExportExcel').prop('disabled', n !== 6);
+    updateSteps();
+    window.scrollTo(0, 0);
+  }
+
+  /* ================= 事件绑定 ================= */
+  $('.db-card input').on('change', function () {
+    data.db = this.value;
+    $('.db-card').removeClass('selected');
+    $(this).closest('.db-card').addClass('selected');
+  });
+
+  $('#btnPrev').on('click', function () { if (currentStep > 1) goToStep(currentStep - 1); });
+  $('#btnNext').on('click', function () { if (currentStep < 6) goToStep(currentStep + 1); });
+
+  /* 数字输入仅允许数字 */
+  $(document).on('input', '.num', function () { this.value = this.value.replace(/[^0-9]/g, ''); });
+
+  /* 字段表：新增 / 删除 / 类型联动 */
+  $('#btnAddField').on('click', function () {
+    collectFieldsFromDom();
+    data.fields.push(Core.emptyField());
+    renderFieldRows();
+  });
+  $('#fieldBody').on('click', '.btn-del', function () {
+    collectFieldsFromDom();
+    var i = +$(this).closest('tr').attr('data-i');
+    data.fields.splice(i, 1);
+    renderFieldRows();
+  });
+  $('#fieldBody').on('change', '.f-type', function () {
+    collectFieldsFromDom();
+    var $row = $(this).closest('tr');
+    var f = data.fields[+$row.attr('data-i')];
+    if (!f) return;
+    var st = TYPE_STYLE[f.type] || TYPE_STYLE['字符型'];
+    if (!st.len) { f.length = ''; $row.find('.f-len').val(''); }
+    if (!st.num) { f.precision = ''; f.scale = ''; $row.find('.f-pre, .f-sca').val(''); }
+    $row.find('.f-len').prop('disabled', !st.len);
+    $row.find('.f-pre, .f-sca').prop('disabled', !st.num);
+    clearErr();
+  });
+
+  /* 索引：新增 / 删除 / 名称 / 类型 / 选择字段 / 移除字段 */
+  $('#btnAddIndex').on('click', function () {
+    if (data.indexes.length >= MAX_INDEX) return;
+    // 新增索引默认「普通索引」，需要唯一索引时在卡片上切换类型
+    data.indexes.push({ name: Core.indexAutoName(data.table, data.indexes.length), nameAuto: true, unique: false, fields: [] });
+    renderIdxStep();
+  });
+  $('#idxList').on('click', '.idx-del', function () {
+    var i = +$(this).closest('.idx-card').attr('data-i');
+    data.indexes.splice(i, 1);
+    renderIdxStep();
+  });
+  $('#idxList').on('input', '.idx-name', function () {
+    var i = +$(this).closest('.idx-card').attr('data-i');
+    data.indexes[i].name = this.value;
+    data.indexes[i].nameAuto = false;
+  });
+  $('#idxList').on('change', '.idx-type', function () {
+    var i = +$(this).closest('.idx-card').attr('data-i');
+    data.indexes[i].unique = this.value === 'unique';
+  });
+  $('#idxList').on('click', '.btn-pick', function () {
+    openModal(+$(this).attr('data-i'));
+  });
+  $('#idxList').on('click', '.chip-del', function () {
+    var i = +$(this).attr('data-i');
+    var f = $(this).attr('data-f');
+    data.indexes[i].fields = data.indexes[i].fields.filter(function (x) { return x !== f; });
+    renderIdxStep();
+  });
+
+  /* 弹窗 */
+  $('#modalFields').on('change', '.modal-chk', function () {
+    var v = this.value;
+    if (this.checked) {
+      if (modalOrder.indexOf(v) < 0) {
+        if (modalOrder.length >= MAX_INDEX_FIELDS) {
+          this.checked = false;
+          $('#modalErr').removeAttr('hidden').text('单个索引最多选择 ' + MAX_INDEX_FIELDS + ' 个字段');
+          return;
+        }
+        modalOrder.push(v);
+      }
+    } else {
+      modalOrder = modalOrder.filter(function (x) { return x !== v; });
+    }
+    $('#modalErr').attr('hidden', 'hidden').text('');
+    updateModalOrder();
+  });
+  $('#modalOrder').on('click', '.chip-del', function () {
+    var f = $(this).attr('data-f');
+    modalOrder = modalOrder.filter(function (x) { return x !== f; });
+    $('#modalFields .modal-chk[value="' + f + '"]').prop('checked', false);
+    updateModalOrder();
+  });
+  $('#modalOk').on('click', function () {
+    if (!modalOrder.length) { $('#modalErr').removeAttr('hidden').text('请至少选择一个字段'); return; }
+    data.indexes[editingIndex].fields = modalOrder.slice();
+    closeModal();
+    renderIdxStep();
+  });
+  $('#modalCancel').on('click', closeModal);
+
+  /* 复制 DDL */
+  function fallbackCopy(txt, cb) {
+    var $ta = $('<textarea>').val(txt).css({ position: 'fixed', opacity: 0, left: '-9999px' }).appendTo('body');
+    $ta[0].select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    $ta.remove();
+    cb(ok);
+  }
+  $('#btnCopy').on('click', function () {
+    var $b = $(this);
+    var txt = $('#ddlText').text();
+    var done = function (ok) {
+      $b.text(ok ? '已复制' : '复制失败，请手动选择');
+      setTimeout(function () { $b.text('复制 DDL'); }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () { done(true); }, function () { fallbackCopy(txt, done); });
+    } else {
+      fallbackCopy(txt, done);
+    }
+  });
+
+  /* 导出 Excel 文档 */
+  $('#btnExportExcel').on('click', function () {
+    var $b = $(this);
+    try {
+      exportExcelDoc();
+      $b.text('已导出');
+      setTimeout(function () { $b.text('导出 Excel'); }, 1500);
+    } catch (e) {
+      err('导出失败：' + (e && e.message ? e.message : e));
+    }
+  });
+
+  /* 重新填写 */
+  $('#btnReset').on('click', function () {
+    if (!confirm('确定要清空所有已录入内容并重新填写吗？')) return;
+    data = Core.emptyInput();
+    currentStep = 1;
+    goToStep(1);
+  });
+
+  /* ================= 供自动化 / AI 直接驱动页面的稳定入口 ================= */
+  window.ctdutil = {
+    version: Core.VERSION,
+    core: Core,
+    getData: function () { return JSON.parse(JSON.stringify(data)); },
+    setData: function (input) {
+      var norm = Core.normalizeInput(input);
+      data = norm.data;
+      currentStep = 1;
+      goToStep(1);
+      return { ok: norm.errors.length === 0, errors: norm.errors };
+    },
+    generate: function (input, opts) { return Core.generate(input == null ? data : input, opts); },
+    goToStep: goToStep,
+    validateAll: function () { return Core.validate(data); }
+  };
+
+  /* ================= 初始化 ================= */
+  goToStep(1);
+})(jQuery, window.Core);
+</script>
+</body>
+</html>

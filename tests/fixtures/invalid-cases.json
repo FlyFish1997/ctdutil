@@ -1,0 +1,407 @@
+{
+  "_readme": "校验规则用例。data 为『规范化之后』的形状（字符串数值），直接喂给 Core.validate。ok 用例必须零错误，fail 用例断言 errors[0].code 恰为 expect。",
+  "ok": [
+    {
+      "title": "基准合法输入",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "emp_no", "desc": "员工编号", "type": "字符型", "length": "20", "precision": "", "scale": "" }],
+        "pk": { "name": "pk_emp", "fields": ["emp_no"] },
+        "indexes": [{ "name": "idx_emp_01", "fields": ["emp_name"] }]
+      }
+    },
+    {
+      "title": "允许无主键",
+      "data": {
+        "db": "gauss", "schema": "public", "table": "t1", "tableDesc": "表1",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] },
+        "indexes": []
+      }
+    },
+    {
+      "title": "允许无索引",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "t2", "tableDesc": "表2",
+        "fields": [
+          { "name": "c1", "desc": "列1", "type": "字符型", "length": "1", "precision": "", "scale": "" },
+          { "name": "c2", "desc": "列2", "type": "时间戳", "length": "", "precision": "", "scale": "" }
+        ],
+        "pk": { "name": "pk_t2", "fields": ["c1", "c2"] },
+        "indexes": []
+      }
+    },
+    {
+      "title": "小数位数为 0 合法（0 < 精度）",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "t3", "tableDesc": "表3",
+        "fields": [{ "name": "amt", "desc": "金额", "type": "数值型", "length": "", "precision": "10", "scale": "0" }],
+        "pk": { "name": "", "fields": [] },
+        "indexes": []
+      }
+    },
+    {
+      "title": "索引名可自定义（不强制 idx_ 前缀）",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "t4", "tableDesc": "表4",
+        "fields": [
+          { "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "c2", "desc": "列2", "type": "整型", "length": "", "precision": "", "scale": "" }
+        ],
+        "pk": { "name": "pk_t4", "fields": ["c1"] },
+        "indexes": [{ "name": "custom_idx", "fields": ["c2"] }]
+      }
+    },
+    {
+      "title": "字段名大小写不敏感比较：不重复",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "t5", "tableDesc": "表5",
+        "fields": [
+          { "name": "COL_A", "desc": "列甲", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "col_b", "desc": "列乙", "type": "整型", "length": "", "precision": "", "scale": "" }
+        ],
+        "pk": { "name": "", "fields": [] },
+        "indexes": []
+      }
+    },
+    {
+      "title": "唯一索引（indexes[].unique=true）合法",
+      "data": {
+        "db": "mysql", "schema": "shop", "table": "t9", "tableDesc": "表9",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "字符型", "length": "10", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] },
+        "indexes": [
+          { "name": "uk_t9_01", "unique": true, "fields": ["c1"] },
+          { "name": "idx_t9_02", "unique": false, "fields": ["c1"] }
+        ]
+      }
+    }
+  ],
+  "fail": [
+    {
+      "title": "顶层不是对象（形状类错误，走 generate 全链）",
+      "expect": "E_INPUT_SHAPE",
+      "raw": true,
+      "data": [1, 2, 3]
+    },
+    {
+      "title": "不支持的数据库（形状类错误，走 generate 全链）",
+      "expect": "E_DB_INVALID",
+      "raw": true,
+      "data": {
+        "db": "postgres", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "不支持的字段类型（形状类错误，走 generate 全链）",
+      "expect": "E_TYPE_INVALID",
+      "raw": true,
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "", "desc": "列1", "type": "字符串", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "未选择数据库",
+      "expect": "E_DB_REQUIRED",
+      "data": {
+        "db": null, "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "Schema 为空",
+      "expect": "E_SCHEMA_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "Schema 非法标识符",
+      "expect": "E_SCHEMA_INVALID",
+      "data": {
+        "db": "oracle", "schema": "1scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "表名为空",
+      "expect": "E_TABLE_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "表名非法标识符",
+      "expect": "E_TABLE_INVALID",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp-1", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "表描述为空",
+      "expect": "E_TABLE_DESC_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "没有任何字段",
+      "expect": "E_FIELD_EMPTY",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [], "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "字段名为空",
+      "expect": "E_FIELD_NAME_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "字段名非法标识符",
+      "expect": "E_FIELD_NAME_INVALID",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "2col", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "字段名重复（大小写不敏感）",
+      "expect": "E_FIELD_NAME_DUP",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [
+          { "name": "COL_A", "desc": "列甲", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "col_a", "desc": "列甲2", "type": "整型", "length": "", "precision": "", "scale": "" }
+        ],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "字段描述为空",
+      "expect": "E_FIELD_DESC_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "字符型缺长度",
+      "expect": "E_FIELD_LENGTH_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "字符型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "字符型长度为 0",
+      "expect": "E_FIELD_LENGTH_INVALID",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "字符型", "length": "0", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "数值型缺精度",
+      "expect": "E_FIELD_PRECISION_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "数值型", "length": "", "precision": "", "scale": "2" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "数值型精度为 0",
+      "expect": "E_FIELD_PRECISION_INVALID",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "数值型", "length": "", "precision": "0", "scale": "2" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "数值型缺小数位数",
+      "expect": "E_FIELD_SCALE_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "数值型", "length": "", "precision": "10", "scale": "" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "数值型小数位数非数字",
+      "expect": "E_FIELD_SCALE_INVALID",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "数值型", "length": "", "precision": "10", "scale": "x" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "数值型小数位数 ≥ 精度",
+      "expect": "E_FIELD_SCALE_GE_PRECISION",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "数值型", "length": "", "precision": "10", "scale": "10" }],
+        "pk": { "name": "", "fields": [] }, "indexes": []
+      }
+    },
+    {
+      "title": "有主键字段但主键名为空",
+      "expect": "E_PK_NAME_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": ["c1"] }, "indexes": []
+      }
+    },
+    {
+      "title": "主键名非法标识符",
+      "expect": "E_PK_NAME_INVALID",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "9pk", "fields": ["c1"] }, "indexes": []
+      }
+    },
+    {
+      "title": "主键引用不存在的字段",
+      "expect": "E_PK_FIELD_UNKNOWN",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "pk_emp", "fields": ["nope"] }, "indexes": []
+      }
+    },
+    {
+      "title": "主键字段重复",
+      "expect": "E_PK_FIELD_DUP",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [
+          { "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "c2", "desc": "列2", "type": "整型", "length": "", "precision": "", "scale": "" }
+        ],
+        "pk": { "name": "pk_emp", "fields": ["c1", "c1"] }, "indexes": []
+      }
+    },
+    {
+      "title": "索引数量超过 10",
+      "expect": "E_INDEX_COUNT_EXCEED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [
+          { "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "c2", "desc": "列2", "type": "整型", "length": "", "precision": "", "scale": "" }
+        ],
+        "pk": { "name": "pk_emp", "fields": ["c1"] },
+        "indexes": [
+          { "name": "i1", "fields": ["c2"] }, { "name": "i2", "fields": ["c2"] }, { "name": "i3", "fields": ["c2"] },
+          { "name": "i4", "fields": ["c2"] }, { "name": "i5", "fields": ["c2"] }, { "name": "i6", "fields": ["c2"] },
+          { "name": "i7", "fields": ["c2"] }, { "name": "i8", "fields": ["c2"] }, { "name": "i9", "fields": ["c2"] },
+          { "name": "i10", "fields": ["c2"] }, { "name": "i11", "fields": ["c2"] }
+        ]
+      }
+    },
+    {
+      "title": "索引未选择字段",
+      "expect": "E_INDEX_FIELDS_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] },
+        "indexes": [{ "name": "idx_1", "fields": [] }]
+      }
+    },
+    {
+      "title": "单个索引字段数超过 10",
+      "expect": "E_INDEX_FIELDS_EXCEED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [
+          { "name": "a1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "a2", "desc": "列2", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "a3", "desc": "列3", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "a4", "desc": "列4", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "a5", "desc": "列5", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "a6", "desc": "列6", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "a7", "desc": "列7", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "a8", "desc": "列8", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "a9", "desc": "列9", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "a10", "desc": "列10", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "a11", "desc": "列11", "type": "整型", "length": "", "precision": "", "scale": "" }
+        ],
+        "pk": { "name": "", "fields": [] },
+        "indexes": [{ "name": "idx_1", "fields": ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9", "a10", "a11"] }]
+      }
+    },
+    {
+      "title": "索引名为空",
+      "expect": "E_INDEX_NAME_REQUIRED",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] },
+        "indexes": [{ "name": "", "fields": ["c1"] }]
+      }
+    },
+    {
+      "title": "索引名非法标识符",
+      "expect": "E_INDEX_NAME_INVALID",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [{ "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" }],
+        "pk": { "name": "", "fields": [] },
+        "indexes": [{ "name": "1idx", "fields": ["c1"] }]
+      }
+    },
+    {
+      "title": "索引名重复",
+      "expect": "E_INDEX_NAME_DUP",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [
+          { "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "c2", "desc": "列2", "type": "整型", "length": "", "precision": "", "scale": "" }
+        ],
+        "pk": { "name": "", "fields": [] },
+        "indexes": [{ "name": "idx_dup", "fields": ["c1"] }, { "name": "IDX_DUP", "fields": ["c2"] }]
+      }
+    },
+    {
+      "title": "索引字段与主键完全相同（顺序无关）",
+      "expect": "E_INDEX_EQUALS_PK",
+      "data": {
+        "db": "oracle", "schema": "scott", "table": "emp", "tableDesc": "员工信息表",
+        "fields": [
+          { "name": "c1", "desc": "列1", "type": "整型", "length": "", "precision": "", "scale": "" },
+          { "name": "c2", "desc": "列2", "type": "整型", "length": "", "precision": "", "scale": "" }
+        ],
+        "pk": { "name": "pk_emp", "fields": ["c1", "c2"] },
+        "indexes": [{ "name": "idx_1", "fields": ["c2", "c1"] }]
+      }
+    }
+  ]
+}

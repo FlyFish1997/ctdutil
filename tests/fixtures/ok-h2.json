@@ -1,0 +1,17 @@
+{
+  "db": "h2",
+  "schema": "public",
+  "table": "T_ORDER",
+  "tableDesc": "订单主表（H2 文件模式）",
+  "fields": [
+    { "name": "order_id", "desc": "订单号", "type": "字符型", "length": "32", "precision": "", "scale": "" },
+    { "name": "amount", "desc": "金额", "type": "数值型", "length": "", "precision": "18", "scale": "4" },
+    { "name": "qty", "desc": "数量", "type": "整型", "length": "", "precision": "", "scale": "" },
+    { "name": "order_date", "desc": "下单日期", "type": "日期型", "length": "", "precision": "", "scale": "" },
+    { "name": "created_at", "desc": "创建时间", "type": "时间戳", "length": "", "precision": "", "scale": "" }
+  ],
+  "pk": { "name": "pk_t_order", "fields": ["order_id"] },
+  "indexes": [
+    { "nameAuto": true, "fields": ["order_date"] }
+  ]
+}

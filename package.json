@@ -1,0 +1,20 @@
+{
+  "name": "ctdutil",
+  "version": "2.2.0",
+  "private": true,
+  "description": "表结构登记与 DDL 生成工具（Oracle / GaussDB / MySQL / H2；普通索引与唯一索引；人类界面 + AI 可操作的 JSON 接口）",
+  "type": "commonjs",
+  "main": "src/core.js",
+  "scripts": {
+    "build": "node src/build.mjs",
+    "check": "node src/build.mjs --check",
+    "test": "node tests/run.js",
+    "cli": "node src/cli.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "_note": "本项目刻意保持零依赖（无 dependencies / devDependencies）。本机沙箱下进程对工作区只读（npm install 会 EPERM），且「双击即用、离线」是既有交付形态；测试用 Node 内置能力 + 自写断言器（tests/harness.js）。因此请直接执行 `node tests/run.js`；`npm test` 仅在有可用 npm 环境时才可用。"
+}
