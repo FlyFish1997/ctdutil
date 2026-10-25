@@ -2,6 +2,7 @@
   "name": "ctdutil",
   "version": "2.2.0",
   "private": true,
+  "license": "MIT",
   "description": "表结构登记与 DDL 生成工具（Oracle / GaussDB / MySQL / H2；普通索引与唯一索引；人类界面 + AI 可操作的 JSON 接口）",
   "type": "commonjs",
   "main": "src/core.js",

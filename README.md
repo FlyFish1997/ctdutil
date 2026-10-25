@@ -139,6 +139,7 @@ ctdutil/
 ├── jquery.min.js             # jQuery 3.7.1（本地引用，离线可用）
 ├── package.json              # 元数据与脚本入口；无任何依赖
 ├── README.md                 # 本文件
+├── LICENSE                   # MIT 许可
 ├── 技术方案.md                # 架构、交互、校验规则、DDL 生成设计
 ├── 开发记录.md                # 按时间顺序的开发、测试与问题修复记录
 ├── src/
@@ -214,4 +215,6 @@ node src/build.mjs --check    # 只检查生成物是否与源文件一致（漂
 
 ## 许可
 
-本仓库暂未声明开源许可。如需对外发布，请先补充 `LICENSE` 文件。
+本项目采用 [MIT 许可](LICENSE)。
+
+Copyright (c) 2026 ctdutil contributors
